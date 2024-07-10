@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo da VELIA - IMG²</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 100%;
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 1.5rem;
+            font-size: 2.5rem;
+        }
+        .game-area {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+        .board-container {
+            flex: 1;
+            margin-right: 1rem;
+        }
+        table {
+            border-collapse: collapse;
+            margin: 0 auto;
+        }
+        td {
+            width: 80px;
+            height: 80px;
+            text-align: center;
+            vertical-align: middle;
+            border: 2px solid #34495e;
+            font-size: 2.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        td:hover {
+            background-color: #ecf0f1;
+        }
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        #chat {
+            flex-grow: 1;
+            max-height: 240px;
+            overflow-y: auto;
+            border: 1px solid #bdc3c7;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 1rem;
+            background-color: #ecf0f1;
+        }
+        .message {
+            margin-bottom: 8px;
+            padding: 5px;
+            border-radius: 5px;
+        }
+        .player-x { background-color: #3498db; color: white; }
+        .player-o { background-color: #e74c3c; color: white; }
+        .system { background-color: #2ecc71; color: white; font-style: italic; }
+        #result {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .ai-select {
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+        }
+        .ai-select label {
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        select {
+            padding: 5px;
+            border-radius: 5px;
+            border: 1px solid #bdc3c7;
+            background-color: white;
+            font-size: 1rem;
+        }
+        #playButton {
+            background-color: #2980b9;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        #playButton:hover {
+            background-color: #3498db;
+        }
+        #newGameButton {
+            background-color: #27ae60;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        #newGameButton:hover {
+            background-color: #2ecc71;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Jogo da VELIA - IMG²</h1>
+        <div class="ai-select">
+            <div>
+                <label for="player-x-ai">Player X:</label>
+                <select id="player-x-ai" onchange="setAI('X', this.value)">
+                    <option value="OpenAI" {% if player_ai['X'] == 'OpenAI' %}selected{% endif %}>OpenAI (GPT-4)</option>
+                    <option value="Anthropic" {% if player_ai['X'] == 'Anthropic' %}selected{% endif %}>Anthropic (Claude)</option>
+                    <option value="Gemini" {% if player_ai['X'] == 'Gemini' %}selected{% endif %}>Google (Gemini)</option>
+                </select>
+            </div>
+            <div>
+                <label for="player-o-ai">Player O:</label>
+                <select id="player-o-ai" onchange="setAI('O', this.value)">
+                    <option value="OpenAI" {% if player_ai['O'] == 'OpenAI' %}selected{% endif %}>OpenAI (GPT-4)</option>
+                    <option value="Anthropic" {% if player_ai['O'] == 'Anthropic' %}selected{% endif %}>Anthropic (Claude)</option>
+                    <option value="Gemini" {% if player_ai['O'] == 'Gemini' %}selected{% endif %}>Google (Gemini)</option>
+                </select>
+            </div>
+        </div>
+        <div class="game-area">
+            <div class="board-container">
+                <table id="board">
+                    {% for row in board %}
+                    <tr>
+                        {% for cell in row %}
+                        <td>{{ cell }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+            <div class="chat-container">
+                <div id="chat">
+                    {% for message in messages %}
+                    <div class="message {% if message.player == 'X' %}player-x{% elif message.player == 'O' %}player-o{% else %}system{% endif %}">
+                        <strong>{{ message.player }}:</strong> {{ message.message }}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <p id="result">Player {{ current_player }}'s turn</p>
+        <button id="playButton">Play Turn</button>
+        <button id="newGameButton" style="display: none;">New Game</button>
+    </div>
+    <script>
+        let gameOver = {{ 'true' if game_over else 'false' }};
+
+        function setAI(player, ai) {
+            fetch('/set_ai', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ player: player, ai: ai }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('AI updated:', data.player_ai);
+            });
+        }
+
+        function updateGameState(data) {
+            const board = document.getElementById('board');
+            for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 3; j++) {
+                    board.rows[i].cells[j].textContent = data.board[i][j];
+                }
+            }
+            document.getElementById('result').textContent = data.result;
+
+            const chat = document.getElementById('chat');
+            chat.innerHTML = '';
+            data.messages.forEach(message => {
+                const messageDiv = document.createElement('div');
+                if (message.type === 'system') {
+                    messageDiv.className = 'message system';
+                    messageDiv.innerHTML = `<strong>System:</strong> ${message.message}`;
+                } else {
+                    messageDiv.className = `message ${message.player === 'X' ? 'player-x' : 'player-o'}`;
+                    messageDiv.innerHTML = `<strong>${message.player} (${data.player_ai[message.player]}):</strong> ${message.message}`;
+                }
+                chat.appendChild(messageDiv);
+            });
+            chat.scrollTop = chat.scrollHeight;
+
+            gameOver = data.game_over;
+            document.getElementById('playButton').disabled = gameOver;
+            document.getElementById('newGameButton').style.display = gameOver ? 'inline-block' : 'none';
+        }
+
+        document.getElementById('playButton').addEventListener('click', function() {
+            if (gameOver) return;
+            fetch('/play', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    updateGameState(data);
+                });
+        });
+
+        document.getElementById('newGameButton').addEventListener('click', function() {
+            fetch('/new_game', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    updateGameState(data);
+                });
+        });
+    </script>
+</body>
+</html>
